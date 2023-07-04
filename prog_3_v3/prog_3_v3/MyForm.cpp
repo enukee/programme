@@ -205,6 +205,10 @@ System::Void MyForm::pictureBox1_MouseUp(System::Object^ sender, System::Windows
 	this->pictureBox1->Refresh();
 }
 
+System::Void MyForm::button_save_Click(System::Object^ sender, System::EventArgs^ e) {
+	save_img(matrix);
+}
+
 System::Void MyForm::button_processing_Click(System::Object^ sender, System::EventArgs^ e) {
 	if (this->backgroundWorker1->IsBusy != true) {
 		this->backgroundWorker1->RunWorkerAsync();
@@ -238,7 +242,17 @@ System::Void MyForm::backgroundWorker1_DoWork(System::Object^ sender, System::Co
 		System::String^ data = brightness_correction(&img_1, &img_2, coord_img_1, coord_img_2, this);
 		this->textBox3->Invoke(gcnew Action<System::String^>(this, &MyForm::dataUpdate), data);
 		
-		System::Drawing::Bitmap^  img = combining(&img_1, &img_2, coord_img_1, coord_img_2, this);
+		matrix = combining(&img_1, &img_2, coord_img_1, coord_img_2, this);
+
+		System::Drawing::Bitmap^ img = gcnew System::Drawing::Bitmap(matrix->get_width(), matrix->get_height());
+
+		Pixel<BYTE> pixel;
+		for (int i = 0; i < matrix->get_height(); ++i) {
+			for (int j = 0; j < matrix->get_width(); ++j) {
+				pixel = matrix->get_pixel(i, j);
+				img->SetPixel(j, i, Color::FromArgb(pixel.canal_R, pixel.canal_G, pixel.canal_B));
+			}
+		}
 		this->pictureBox3->Invoke(gcnew Action<System::Drawing::Bitmap^>(this, &MyForm::setImage), img);
 
 		this->set_value(100);

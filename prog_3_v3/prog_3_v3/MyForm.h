@@ -1,5 +1,6 @@
 #pragma once
 #include "pixel.h" 
+#include "ImageMatrix.h" 
 
 namespace prog3v3 {
 
@@ -31,6 +32,7 @@ namespace prog3v3 {
 
 	private: Image^ image_1;
 	private: Bitmap^ bitmap_1;
+	private: ImageMatrix* matrix;
 
 	private: System::Windows::Forms::TabPage^ tabPage1;
 	private: System::Windows::Forms::TabPage^ tabPage3;
@@ -73,7 +75,8 @@ namespace prog3v3 {
 	private: System::Windows::Forms::Panel^ panel2;
 	private: System::ComponentModel::BackgroundWorker^ backgroundWorker1;
 	private: System::Windows::Forms::ProgressBar^ progressBar1;
-	
+	private: System::Windows::Forms::Button^ button_save;
+
 
 	private: System::Windows::Forms::MessageBox^ messageBox_error;
 
@@ -159,6 +162,7 @@ namespace prog3v3 {
 			this->tabPage4 = (gcnew System::Windows::Forms::TabPage());
 			this->pictureBox3 = (gcnew System::Windows::Forms::PictureBox());
 			this->backgroundWorker1 = (gcnew System::ComponentModel::BackgroundWorker());
+			this->button_save = (gcnew System::Windows::Forms::Button());
 			this->tabControl1->SuspendLayout();
 			this->tabPage1->SuspendLayout();
 			this->panel1->SuspendLayout();
@@ -187,6 +191,7 @@ namespace prog3v3 {
 			// tabPage1
 			// 
 			this->tabPage1->BackColor = System::Drawing::Color::White;
+			this->tabPage1->Controls->Add(this->button_save);
 			this->tabPage1->Controls->Add(this->progressBar1);
 			this->tabPage1->Controls->Add(this->label6);
 			this->tabPage1->Controls->Add(this->label5);
@@ -527,6 +532,16 @@ namespace prog3v3 {
 			this->backgroundWorker1->WorkerReportsProgress = true;
 			this->backgroundWorker1->DoWork += gcnew System::ComponentModel::DoWorkEventHandler(this, &MyForm::backgroundWorker1_DoWork);
 			// 
+			// button_save
+			// 
+			this->button_save->Location = System::Drawing::Point(871, 301);
+			this->button_save->Name = L"Сохранить";
+			this->button_save->Size = System::Drawing::Size(134, 33);
+			this->button_save->TabIndex = 27;
+			this->button_save->Text = L"Сохранить";
+			this->button_save->UseVisualStyleBackColor = true;
+			this->button_save->Click += gcnew System::EventHandler(this, &MyForm::button_save_Click);
+			// 
 			// MyForm
 			// 
 			this->AutoScaleDimensions = System::Drawing::SizeF(8, 16);
@@ -553,6 +568,8 @@ namespace prog3v3 {
 		}
 #pragma endregion
 	private: System::Void button_processing_Click(System::Object^ sender, System::EventArgs^ e);
+
+	private: System::Void button_save_Click(System::Object^ sender, System::EventArgs^ e);
 
 	private: System::Void button_open_file_1_Click(System::Object^ sender, System::EventArgs^ e);
 	private: System::Void button_open_file_2_Click(System::Object^ sender, System::EventArgs^ e);

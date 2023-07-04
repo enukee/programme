@@ -1,11 +1,11 @@
 ﻿#include <iostream>
 #include <thread>
 #include <mutex>
+#include <future>
 #include "BmpFile.h"
 #include "correlation.h"
 
 using namespace System::Drawing;
-
 
 std::mutex mtx;
 
@@ -19,18 +19,16 @@ boolean is_bmp_file(char* way) {
 	return is_bmp;
 }
 
-void search_inside_img(boolean& similar, ImageMatrix& Bitmap_1, ImageMatrix& Bitmap_2, unsigned int a, unsigned int b, coordinates* coord_img_2) {
-	mtx.lock();
+void search_inside_img(std::promise<boolean> accumulate_promise, ImageMatrix& Bitmap_1, ImageMatrix& Bitmap_2, unsigned int a, unsigned int b, coordinates* coord_img_2) {
+	boolean similar;
+
 	unsigned int Height = Bitmap_1.get_height();
 	unsigned int Width = Bitmap_1.get_width();
-	mtx.unlock();
 
 	Pixel<BYTE>* Bitmap_im_1 = new Pixel<BYTE>[Width];
 	Pixel<BYTE>* Bitmap_im_2 = new Pixel<BYTE>[Width];
 
-	mtx.lock();
 	unsigned int search_area_w = Bitmap_2.get_width() - Width + 1;
-	mtx.unlock();
 
 	// структура хранения значений коэффициента корреляции для каждого канала
 	Pixel<double> kof_kor;
@@ -40,11 +38,8 @@ void search_inside_img(boolean& similar, ImageMatrix& Bitmap_1, ImageMatrix& Bit
 
 			similar = 1;
 			for (unsigned int t = 0; t < Height; t++) {
-
-				mtx.lock();
 				Bitmap_2.get_row_matrix(Bitmap_im_2, i, j, Width);
 				Bitmap_1.get_row_matrix(Bitmap_im_1, t);
-				mtx.unlock();
 				kof_kor = kcor(Bitmap_im_1, Bitmap_im_2, Width);
 				if (!((kof_kor.canal_R > 0.99) &&
 					(kof_kor.canal_G > 0.99) &&
@@ -63,10 +58,10 @@ void search_inside_img(boolean& similar, ImageMatrix& Bitmap_1, ImageMatrix& Bit
 	}
 
 exit:
+	accumulate_promise.set_value(similar);
+
 	delete[] Bitmap_im_1;
 	delete[] Bitmap_im_2;
-
-	//return similar;
 }
 
 // метод поиска пересечения 2х изображений (поиск img_2 в img_1)
@@ -82,32 +77,33 @@ boolean finding_intersection(BmpFile* img_1, BmpFile* img_2, coordinates* coord_
 	// Записываем в неё нужный фрагмент
 	Bitmap_2.cut_out(img_2, coord_img_2->y, coord_img_2->x);
 	mb->increasing_value(4);
-	
-	boolean similar1;
-	similar1 = 0;
-
-	boolean similar2;
-	similar2 = 0;
 
 	unsigned int Height = Bitmap_1.get_height();
 	unsigned int Width = Bitmap_1.get_width();
 
 	unsigned int search_area_h = Bitmap_2.get_height() - Height + 1;
 
-	//ImageMatrix* bm1 = &Bitmap_1;
-	//ImageMatrix* bm2 = &Bitmap_2;
+	std::promise<boolean> accumulate_promise_1;
+	std::future<boolean> accumulate_future_1 = accumulate_promise_1.get_future();
 
-	std::thread tA(search_inside_img, std::ref(similar1), std::ref(Bitmap_1), std::ref(Bitmap_2), 0, search_area_h / 2,  std::ref(coord_img_2));
-	std::thread tB(search_inside_img, std::ref(similar2), std::ref(Bitmap_1), std::ref(Bitmap_2), search_area_h / 2, search_area_h, std::ref(coord_img_2));
+	std::promise<boolean> accumulate_promise_2;
+	std::future<boolean> accumulate_future_2 = accumulate_promise_2.get_future();
 
+	std::thread tA(search_inside_img, std::move(accumulate_promise_1),
+		std::ref(Bitmap_1), std::ref(Bitmap_2), 0, search_area_h / 2,  std::ref(coord_img_2));
+
+	std::thread tB(search_inside_img, std::move(accumulate_promise_2),
+		std::ref(Bitmap_1), std::ref(Bitmap_2), search_area_h / 2, search_area_h, std::ref(coord_img_2));
+
+	boolean res = accumulate_future_1.get() | accumulate_future_2.get();
 	tA.join();
 	tB.join();
 
-	return (similar1) | (similar2);
+	return res;
 }
 
 //метод объединения изображений
-System::Drawing::Bitmap^ combining(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, coordinates coord_img_2, prog3v3::MyForm^ mb) {
+ImageMatrix* combining(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, coordinates coord_img_2, prog3v3::MyForm^ mb) {
 	unsigned int img_1_height = img_1->get_height();
 	unsigned int img_1_width = img_1->get_width();
 
@@ -144,29 +140,20 @@ System::Drawing::Bitmap^ combining(BmpFile* img_1, BmpFile* img_2, coordinates c
 		Height = img_2->get_height() + coord_general_image_2.y;
 	}
 
-	ImageMatrix Bitmap(Height, Width);
+	ImageMatrix* Bitmap = new ImageMatrix(Height, Width);
 
-	Bitmap.recording(img_2, coord_general_image_2.y, coord_general_image_2.x);
+	Bitmap->recording(img_2, coord_general_image_2.y, coord_general_image_2.x);
 	mb->increasing_value(6);
-	Bitmap.recording(img_1, coord_general_image_1.y, coord_general_image_1.x);
-	mb->increasing_value(6);
+	Bitmap->recording(img_1, coord_general_image_1.y, coord_general_image_1.x);
+	mb->increasing_value(14);
 
-	System::Drawing::Bitmap^ img = gcnew System::Drawing::Bitmap(Bitmap.get_width(), Bitmap.get_height());
+	return Bitmap;
+}
 
-	Pixel<BYTE> pixel;
-	for (int i = 0; i < Bitmap.get_height(); ++i) {
-		for (int j = 0; j < Bitmap.get_width(); ++j) {
-			pixel = Bitmap.get_pixel(i, j);
-			img->SetPixel(j, i, Color::FromArgb(pixel.canal_R, pixel.canal_G, pixel.canal_B));
-		}
-	}
-
-	// это перенести в другое место
-	//BmpFile img_o(&Bitmap);
-	//img_o.bmp_writer((char*)"D:\\GitHub_rep\\foton\\pro_3_v2\\image\\п_4\\1&2.bmp");
-	mb->increasing_value(8);
-
-	return img;
+//сохранение изображения
+void save_img(ImageMatrix* matrix) {
+	BmpFile img_o(matrix);
+	img_o.bmp_writer((char*)"D:\\GitHub_rep\\foton\\pro_3_v2\\image\\п_4\\image.bmp");
 }
 
 // коррекция пикселя
