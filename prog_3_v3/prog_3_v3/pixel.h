@@ -12,6 +12,13 @@ struct coordinates {
 	int width = 0;
 	int height = 0;
 
+	coordinates operator = (coordinates value) {
+		x = value.x;
+		y = value.y;
+
+		return value;
+	}
+
 	void set_coord(int coord_x, int coord_y) {
 		x = coord_x;
 		y = coord_y;
@@ -156,6 +163,11 @@ struct Pixel {
 		return res;
 	}
 
+	void zeroing() {
+		canal_R = 0;
+		canal_G = 0;
+		canal_B = 0;
+	}
 };
 
 // возведение в степень Pixel

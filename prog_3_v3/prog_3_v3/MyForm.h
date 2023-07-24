@@ -1,5 +1,4 @@
 #pragma once
-#include "pixel.h" 
 #include "ImageMatrix.h" 
 
 namespace prog3v3 {

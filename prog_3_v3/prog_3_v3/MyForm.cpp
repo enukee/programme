@@ -60,7 +60,13 @@ System::Void MyForm::textBox_x_1_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_y_1_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox1->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox1->Image->Height);
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox1->Image->Height);
+		else
+		{
+			this->textBox_y_1->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -72,7 +78,13 @@ System::Void MyForm::textBox_y_1_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_w_1_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox1->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox1->Image->Width - Int32::Parse(this->textBox_x_1->Text));
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox1->Image->Width - Int32::Parse(this->textBox_x_1->Text));
+		else
+		{
+			this->textBox_w_1->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -84,7 +96,13 @@ System::Void MyForm::textBox_w_1_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_h_1_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox1->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox1->Image->Height - Int32::Parse(this->textBox_y_1->Text));
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox1->Image->Height - Int32::Parse(this->textBox_y_1->Text));
+		else
+		{
+			this->textBox_h_1->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -96,7 +114,13 @@ System::Void MyForm::textBox_h_1_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_x_2_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox2->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox2->Image->Width);
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox2->Image->Width);
+		else
+		{
+			this->textBox_x_2->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -108,7 +132,13 @@ System::Void MyForm::textBox_x_2_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_y_2_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox2->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox2->Image->Height);
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox2->Image->Height);
+		else
+		{
+			this->textBox_y_2->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -120,7 +150,13 @@ System::Void MyForm::textBox_y_2_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_w_2_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox2->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox2->Image->Width - Int32::Parse(this->textBox_x_2->Text));
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox2->Image->Width - Int32::Parse(this->textBox_x_2->Text));
+		else
+		{
+			this->textBox_w_2->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -132,7 +168,13 @@ System::Void MyForm::textBox_w_2_Validating(System::Object^ sender, System::Comp
 System::Void MyForm::textBox_h_2_Validating(System::Object^ sender, System::ComponentModel::CancelEventArgs^ e) {
 	if (this->pictureBox2->Image != nullptr)
 	{
-		checking_the_value(sender, this->pictureBox2->Image->Height - Int32::Parse(this->textBox_y_2->Text));
+		if (is_integer(sender))
+			checking_the_value(sender, this->pictureBox2->Image->Height - Int32::Parse(this->textBox_y_2->Text));
+		else
+		{
+			this->textBox_h_2->Text = "0";
+			this->messageBox_error->Show("Введёное значения не является числом", "Ошибка");
+		}
 	}
 	else
 	{
@@ -221,8 +263,7 @@ System::Void MyForm::backgroundWorker1_DoWork(System::Object^ sender, System::Co
 	BmpFile img_1(way_1, this);
 	BmpFile img_2(way_2, this);
 
-	coordinates coord_img_1;
-
+	coordinates coord_img_1; // координаты заданного фрагмента внутри img_1
 	coord_img_1.x = Int32::Parse(this->textBox_x_1->Text);
 	coord_img_1.y = Int32::Parse(this->textBox_y_1->Text);
 	coord_img_1.width = Int32::Parse(this->textBox_w_1->Text);

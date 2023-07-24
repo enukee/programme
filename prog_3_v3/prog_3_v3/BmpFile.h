@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ImageMatrix.h"
+//#include "ImageMatrix.h"
 #include "MyForm.h"
 
 class BmpFile : public ImageMatrix{
