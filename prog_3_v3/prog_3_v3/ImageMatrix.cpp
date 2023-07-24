@@ -45,8 +45,6 @@ void ImageMatrix::get_row_matrix(Pixel<BYTE>* matr, unsigned int i) {
 	for (unsigned int j = 0; j < img_Width; j++) {
 		matr[j] = matrix[i][j];
 	}
-
-	//return matr;
 }
 
 // геттер строки матрицы (со срезом начиная от s_1 символа строки s_2 символом строки)
@@ -66,6 +64,15 @@ unsigned int ImageMatrix::get_width() {
 	return img_Width;
 }
 
+// обнуление матрицы
+void ImageMatrix::zeroing() {
+	for (unsigned int i = 0; i < img_Height; i++) {
+		for (unsigned int j = 0; j < img_Width; j++) {
+			matrix[i][j].zeroing();
+		}
+	}
+}
+
 // записывает матрицу Bitmap в матрицу matrix (начиная с позиции matrix[x][y])
 void ImageMatrix::recording(ImageMatrix* Bitmap, unsigned int y, unsigned int x) {
 	for (unsigned int i = 0; i < Bitmap->get_height(); i++) {
@@ -75,7 +82,7 @@ void ImageMatrix::recording(ImageMatrix* Bitmap, unsigned int y, unsigned int x)
 	}
 }
 
-// заполнние матрицы mdtrix значениями матрицы Bitmap (начиная с позиции Bitmap[x][y])
+// заполнение матрицы matrix значениями матрицы Bitmap (начиная с позиции Bitmap[x][y])
 void ImageMatrix::cut_out(ImageMatrix* Bitmap, unsigned int y, unsigned int x) {
 	for (unsigned int i = 0; i < img_Height; i++) {
 		for (unsigned int j = 0; j < img_Width; j++) {
@@ -84,7 +91,7 @@ void ImageMatrix::cut_out(ImageMatrix* Bitmap, unsigned int y, unsigned int x) {
 	}
 }
 
-Pixel<double> ImageMatrix::avg() { // Функция поиска среднего значения массива 
+Pixel<double> ImageMatrix::finding_avg() { // Функция поиска среднего значения массива 
 	Pixel<double> avg;
 
 	for (unsigned int i = 0; i < img_Height; i++) {
@@ -98,9 +105,9 @@ Pixel<double> ImageMatrix::avg() { // Функция поиска среднего значения массива
 	return avg;
 }
 
-Pixel<double> ImageMatrix::sd() {// Функция поиска cреднеквадратическое отклонение массива 
+Pixel<double> ImageMatrix::finding_sd() {// Функция поиска cреднеквадратическое отклонение массива 
 	Pixel<double> sd;
-	Pixel<double> _avg = avg();
+	Pixel<double> _avg = finding_avg();
 
 	for (unsigned int i = 0; i < img_Height; i++) {
 		for (unsigned int j = 0; j < img_Width; j++) {
@@ -112,4 +119,63 @@ Pixel<double> ImageMatrix::sd() {// Функция поиска cреднеквадратическое отклонен
 	sd = pixel_sqrt(sd);
 
 	return sd;
+}
+
+Pixel<double> ImageMatrix::finding_cor(unsigned int x, unsigned int y, ImageMatrix& matr) {
+	unsigned int Height = matr.get_height();
+	unsigned int Width = matr.get_width();
+
+	Pixel<double> avg_1 = finding_avg();
+	Pixel<double> avg_2 = matr.finding_avg();
+
+	Pixel<double> avg_1_2;
+	for (unsigned int i = 0; i < Height; i++) {
+		for (unsigned int j = 0; j < Width; j++) {
+			avg_1_2 += matrix[i + x][j + y].to_double() * matr.matrix[i][j].to_double();
+		}
+	}
+	avg_1_2 /= Height * Width;
+
+	Pixel<double> sd_1 = finding_sd();
+	Pixel<double> sd_2 = matr.finding_sd();
+
+	Pixel<double> kof_kor;
+	kof_kor = (avg_1_2 - avg_1 * avg_2) / (sd_1 * sd_2);
+
+	return kof_kor;
+}
+
+//поиск коэффициента корреляции с матрицей matr (x и y позиция matr внутри данной матрицы)
+boolean ImageMatrix::finding_correlation(Pixel<double>& coef_cor, unsigned int x, unsigned int y, ImageMatrix& matr) {
+	unsigned int Height = matr.get_height();
+	unsigned int Width = matr.get_width();
+
+	// коэффициент корреляции строк матриц
+	Pixel<double> coef_cor_str;
+
+	class RowOfPixels {
+	public:
+		Pixel<BYTE>* Bitmap;
+
+		RowOfPixels(unsigned int Width);
+		~RowOfPixels();
+	};
+
+	ImageString Bitmap_im_1(Width);
+	ImageString Bitmap_im_2(Width);
+
+	for (unsigned int t = 0; t < Height; t++) {
+		get_row_matrix(Bitmap_im_1.mass, x + t, y, Width);
+		matr.get_row_matrix(Bitmap_im_2.mass, t);
+		coef_cor_str = Bitmap_im_2.kcor(Bitmap_im_1.mass, Bitmap_im_2.mass, Width);
+		coef_cor += coef_cor_str;
+		if (((coef_cor_str.canal_R < 0.6) ||
+			(coef_cor_str.canal_G < 0.6) ||
+			(coef_cor_str.canal_B < 0.6))) {
+			return 0;
+		}
+	}
+	coef_cor /= Height;
+
+	return 1;
 }

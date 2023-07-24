@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pixel.h"
+#include "ImageString.h"
 
 class ImageMatrix {
 protected:
@@ -29,9 +30,22 @@ public:
 	// геттер ширины изображени€
 	unsigned int get_width();
 
-	//void copy(ImageMatrix Bitmap);
+	// обнуление матрицы
+	void zeroing();
+
+	// записывает матрицу Bitmap в матрицу matrix (начина€ с позиции matrix[x][y])
 	void recording(ImageMatrix* Bitmap, unsigned int y, unsigned int x);
+
+	// заполнение матрицы matrix значени€ми матрицы Bitmap (начина€ с позиции Bitmap[x][y])
 	void cut_out(ImageMatrix* Bitmap, unsigned int y, unsigned int x);
-	Pixel<double> avg();
-	Pixel<double>sd();
+
+	// ‘ункци€ поиска среднего значени€ массива 
+	Pixel<double> finding_avg();
+	// ‘ункци€ поиска cреднеквадратическое отклонение массива 
+	Pixel<double> finding_sd();
+
+	Pixel<double> ImageMatrix::finding_cor(unsigned int x, unsigned int y, ImageMatrix& matr);
+
+	//поиск коэффициента коррел€ции с матрицей 
+	boolean finding_correlation(Pixel<double>& coef_cor, unsigned int x, unsigned int y, ImageMatrix& matr);
 };

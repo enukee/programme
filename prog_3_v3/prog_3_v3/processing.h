@@ -1,9 +1,7 @@
 ﻿#include <iostream>
 #include <thread>
-#include <mutex>
 #include <future>
 #include "BmpFile.h"
-#include "correlation.h"
 
 using namespace System::Drawing;
 
@@ -19,52 +17,45 @@ boolean is_bmp_file(char* way) {
 	return is_bmp;
 }
 
-void search_inside_img(std::promise<boolean> accumulate_promise, ImageMatrix& Bitmap_1, ImageMatrix& Bitmap_2, unsigned int a, unsigned int b, coordinates* coord_img_2) {
-	boolean similar;
+coordinates search_inside_img(ImageMatrix* Bitmap_1, ImageMatrix* Bitmap_2, unsigned int a, unsigned int b, bool* similar) {
+	unsigned int Height = Bitmap_1->get_height();
+	unsigned int Width = Bitmap_1->get_width();
 
-	unsigned int Height = Bitmap_1.get_height();
-	unsigned int Width = Bitmap_1.get_width();
+	unsigned int search_area_w = Bitmap_2->get_width() - Width + 1;
 
-	Pixel<BYTE>* Bitmap_im_1 = new Pixel<BYTE>[Width];
-	Pixel<BYTE>* Bitmap_im_2 = new Pixel<BYTE>[Width];
-
-	unsigned int search_area_w = Bitmap_2.get_width() - Width + 1;
+	coordinates coord_img;
 
 	// структура хранения значений коэффициента корреляции для каждого канала
-	Pixel<double> kof_kor;
-
+	Pixel<double> coef_cor;
+	Pixel<double> max_coef_cor;
+	
 	for (unsigned int i = a; i < b; i++) {
 		for (unsigned int j = 0; j < search_area_w; j++) {
+			coef_cor = Bitmap_2->finding_cor(i, j, *Bitmap_1);
 
-			similar = 1;
-			for (unsigned int t = 0; t < Height; t++) {
-				Bitmap_2.get_row_matrix(Bitmap_im_2, i, j, Width);
-				Bitmap_1.get_row_matrix(Bitmap_im_1, t);
-				kof_kor = kcor(Bitmap_im_1, Bitmap_im_2, Width);
-				if (!((kof_kor.canal_R > 0.99) &&
-					(kof_kor.canal_G > 0.99) &&
-					(kof_kor.canal_B > 0.99)))
-					similar = 0;
-				break;
-			}
-			if (similar) {
-				coord_img_2->x = j;
-				coord_img_2->y = i;
-
-				goto exit;
+			if ((coef_cor.canal_R > max_coef_cor.canal_R) &&
+				(coef_cor.canal_G > max_coef_cor.canal_G) &&
+				(coef_cor.canal_B > max_coef_cor.canal_B)) {
+				max_coef_cor = coef_cor;
+				coord_img.x = j;
+				coord_img.y = i;
+				*similar = 1;
 			}
 
+			if ((coef_cor.canal_R > 0.99) &&
+				(coef_cor.canal_G > 0.99) &&
+				(coef_cor.canal_B > 0.99)) {
+				*similar = 1;
+				return coord_img;
+			}
+			//coef_cor.zeroing();
 		}
 	}
 
-exit:
-	accumulate_promise.set_value(similar);
-
-	delete[] Bitmap_im_1;
-	delete[] Bitmap_im_2;
+	return coord_img;
 }
 
-// метод поиска пересечения 2х изображений (поиск img_2 в img_1)
+// метод поиска пересечения 2х изображений (поиск img_1 в img_2)
 boolean finding_intersection(BmpFile* img_1, BmpFile* img_2, coordinates* coord_img_1, coordinates* coord_img_2, prog3v3::MyForm^ mb) {
 	// Создаём матрицу части изображения img_1
 	ImageMatrix Bitmap_1(coord_img_1->height, coord_img_1->width);
@@ -79,27 +70,21 @@ boolean finding_intersection(BmpFile* img_1, BmpFile* img_2, coordinates* coord_
 	mb->increasing_value(4);
 
 	unsigned int Height = Bitmap_1.get_height();
-	unsigned int Width = Bitmap_1.get_width();
+	//unsigned int Width = Bitmap_1.get_width();
 
 	unsigned int search_area_h = Bitmap_2.get_height() - Height + 1;
 
-	std::promise<boolean> accumulate_promise_1;
-	std::future<boolean> accumulate_future_1 = accumulate_promise_1.get_future();
+	bool similar = 0;
 
-	std::promise<boolean> accumulate_promise_2;
-	std::future<boolean> accumulate_future_2 = accumulate_promise_2.get_future();
+	auto f1 = std::async(std::launch::async, search_inside_img, &Bitmap_1, &Bitmap_2,
+		0, search_area_h, &similar);
 
-	std::thread tA(search_inside_img, std::move(accumulate_promise_1),
-		std::ref(Bitmap_1), std::ref(Bitmap_2), 0, search_area_h / 2,  std::ref(coord_img_2));
+	/*f1 = std::async(std::launch::async, search_inside_img, &Bitmap_1, &Bitmap_2,
+		search_area_h / 2, search_area_h, &similar);*/
 
-	std::thread tB(search_inside_img, std::move(accumulate_promise_2),
-		std::ref(Bitmap_1), std::ref(Bitmap_2), search_area_h / 2, search_area_h, std::ref(coord_img_2));
+	*coord_img_2 = f1.get();
 
-	boolean res = accumulate_future_1.get() | accumulate_future_2.get();
-	tA.join();
-	tB.join();
-
-	return res;
+	return similar;
 }
 
 //метод объединения изображений
@@ -116,7 +101,7 @@ ImageMatrix* combining(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, 
 	coordinates coord_general_image_1;
 	coordinates coord_general_image_2;
 
-	if (coord_img_1.x <= coord_img_2.x) {
+	if (coord_img_1.x < coord_img_2.x) {
 		coord_general_image_1.x = coord_img_2.x - coord_img_1.x;
 		coord_general_image_2.x = 0;
 		Width = img_1->get_width() + coord_general_image_1.x;
@@ -128,7 +113,7 @@ ImageMatrix* combining(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, 
 		Width = img_2->get_width() + coord_general_image_2.x;
 	}
 
-	if (coord_img_1.y <= coord_img_2.y) {
+	if (coord_img_1.y < coord_img_2.y) {
 		coord_general_image_1.y = coord_img_2.y - coord_img_1.y;
 		coord_general_image_2.y = 0;
 		Height = img_1->get_height() + coord_general_image_1.y;
@@ -141,6 +126,8 @@ ImageMatrix* combining(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, 
 	}
 
 	ImageMatrix* Bitmap = new ImageMatrix(Height, Width);
+
+	Bitmap->zeroing();
 
 	Bitmap->recording(img_2, coord_general_image_2.y, coord_general_image_2.x);
 	mb->increasing_value(6);
@@ -170,24 +157,24 @@ Pixel<BYTE> color_correction(Pixel<double> pixel, Pixel<double>sco, Pixel<double
 // метод корректирования яркости
 System::String^ brightness_correction(BmpFile* img_1, BmpFile* img_2, coordinates coord_img_1, coordinates coord_img_2, prog3v3::MyForm^ form) {
 
-	// создание матрицы части пересечеия первого изображения
+	// создание матрицы части пересечения первого изображения
 	ImageMatrix Bitmap_1(coord_img_1.height, coord_img_1.width);
 
 	// заполнения первой матрицы 
 	Bitmap_1.cut_out(img_1, coord_img_1.y, coord_img_1.x);
 	form->increasing_value(4);
 
-	// создание матрицы части пересечеия второго изображения
+	// создание матрицы части пересечения второго изображения
 	ImageMatrix Bitmap_2(coord_img_2.height, coord_img_2.width);
 
 	// заполнения второй матрицы 
 	Bitmap_2.cut_out(img_2, coord_img_2.y, coord_img_2.x);
 	form->increasing_value(4);
 
-	Pixel<double> sco_1 = Bitmap_1.sd();
-	Pixel<double> sco_2 = Bitmap_2.sd();
-	Pixel<double> mo_1 = Bitmap_1.avg();
-	Pixel<double> mo_2 = Bitmap_2.avg();
+	Pixel<double> sco_1 = Bitmap_1.finding_sd();
+	Pixel<double> sco_2 = Bitmap_2.finding_sd();
+	Pixel<double> mo_1 = Bitmap_1.finding_avg();
+	Pixel<double> mo_2 = Bitmap_2.finding_avg();
 
 	System::String^ info = "Изображение 1";
 	info += "\r\n Математическое ожидание";
@@ -210,6 +197,9 @@ System::String^ brightness_correction(BmpFile* img_1, BmpFile* img_2, coordinate
 	info += "\r\n    канал R: " + sco_2.canal_R;
 	info += "\r\n    канал G: " + sco_2.canal_G;
 	info += "\r\n    канал B: " + sco_2.canal_B;
+
+	info += "\r\nКоордината 1:\r\n x: " + coord_img_1.x + "   y: " + coord_img_1.y;
+	info += "\r\nКоордината 2:\r\n x: " + coord_img_2.x + "   y: " + coord_img_2.y;
 
 	Pixel<double> sco;
 	Pixel<double> mo;
